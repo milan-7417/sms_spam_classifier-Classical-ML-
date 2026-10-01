@@ -65,9 +65,9 @@ class MessageRequest(BaseModel):
 async def index(request: Request):
     """Render the clean main classifier playground interface."""
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "metadata": metadata,
             "model_loaded": (classifier is not None and vectorizer is not None),
             "load_error": load_error,
@@ -84,9 +84,9 @@ async def documentation(request: Request):
     - Model evaluation and accuracy summary
     """
     return templates.TemplateResponse(
-        "docs.html",
-        {
-            "request": request,
+        request=request,
+        name="docs.html",
+        context={
             "metadata": metadata,
             "model_loaded": (classifier is not None and vectorizer is not None),
             "load_error": load_error,
