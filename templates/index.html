@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SpamGuard - High-accuracy SMS Spam Classifier powered by classical Natural Language Processing and Machine Learning.">
+  <title>SpamGuard — Intelligent SMS Spam Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="container header-container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">SpamGuard</span>
+          <span class="brand-subtitle">Intelligent SMS Spam Detection</span>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <nav class="nav-links">
+        <a href="/" class="nav-link active">Classifier</a>
+        <a href="/documentation" class="nav-link">Documentation</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-badge">Production-Grade NLP Engine</div>
+        <h1 class="hero-title">Is this message safe?</h1>
+        <p class="hero-subtitle">
+          Analyze an SMS message using a classical machine learning model trained to detect fraudulent links, phishing, and promotional spam.
+        </p>
+      </section>
+
+      <!-- Setup Error Notice (if models missing) -->
+      {% if load_error %}
+      <div class="alert alert-error" role="alert">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <strong>Setup Notice:</strong> Trained model artifacts were not detected. Please run 
+          <code>python src/train.py</code> in your project root to train and serialize the models.
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Classifier Playground Card -->
+      <section class="playground-card" aria-label="SMS Spam Classifier Playground">
+        <form id="spam-form" class="classifier-form" novalidate>
+          <div class="form-header">
+            <label for="message-input" class="input-label">
+              <span>SMS Message Text</span>
+              <span class="input-hint">Type, paste, or select a test sample below</span>
+            </label>
+            <div class="char-counter" id="char-counter">0 / 1600</div>
+          </div>
+
+          <div class="textarea-wrapper">
+            <textarea
+              id="message-input"
+              name="message"
+              rows="4"
+              maxlength="1600"
+              placeholder="Congratulations! You have won a free prize. Call 0800... now to claim your £1000 cash jackpot!"
+              required
+              aria-describedby="char-counter"
+            ></textarea>
+          </div>
+
+          <!-- Quick Samples -->
+          <div class="sample-pills-container">
+            <span class="pills-label">Quick Test Examples:</span>
+            <div class="sample-pills">
+              <button type="button" class="pill-btn spam-pill" data-sample="WINNER!! As a valued customer you have been selected to receive a £900 prize reward! Call 09061701461 to claim. Valid 12 hrs only.">
+                <span>🚨 Sample Spam (Prize Scam)</span>
+              </button>
+              <button type="button" class="pill-btn spam-pill" data-sample="URGENT! You have won a 1 week FREE membership in our £100,000 Prize Jackpot! Txt CLAIM to 81010. T&C apply.">
+                <span>🚨 Sample Spam (Jackpot)</span>
+              </button>
+              <button type="button" class="pill-btn ham-pill" data-sample="Hey, are we still meeting for lunch at 1:30 PM today? Let me know if that works for you!">
+                <span>✓ Sample Ham (Meeting)</span>
+              </button>
+              <button type="button" class="pill-btn ham-pill" data-sample="I just finished the project report. I'll email the draft over in about 15 minutes.">
+                <span>✓ Sample Ham (Work)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <button type="submit" id="analyze-btn" class="btn btn-primary" disabled>
+              <span class="btn-text">Analyze Message</span>
+              <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </button>
+            <button type="button" id="clear-btn" class="btn btn-secondary">
+              Clear
+            </button>
+          </div>
+        </form>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state hidden" aria-live="polite">
+          <div class="spinner"></div>
+          <div class="loading-text">
+            <span>Classifying message features...</span>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-card" class="error-card hidden" role="alert">
+          <div class="error-icon">❌</div>
+          <div class="error-body">
+            <h4 class="error-title">Classification Error</h4>
+            <p id="error-message" class="error-text">An unexpected error occurred.</p>
+          </div>
+        </div>
+
+        <!-- Result Card -->
+        <div id="result-card" class="result-card hidden" aria-live="polite">
+          <div class="result-header">
+            <div class="result-status-badge" id="result-badge">
+              <span class="result-icon" id="result-icon">🚨</span>
+              <span class="result-status-text" id="result-status-text">SPAM DETECTED</span>
+            </div>
+            <div class="risk-badge" id="risk-badge">High Risk</div>
+          </div>
+
+          <div class="result-explanation">
+            <h4 class="explanation-title">Analysis Summary</h4>
+            <p class="explanation-text" id="explanation-text">
+              This message contains patterns, tokens, and vocabulary strongly associated with unsolicited promotional spam.
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <div class="footer-left">
+        <p class="footer-copy">Built with Classical NLP &amp; Machine Learning</p>
+        <p class="footer-dataset-credit">
+          Trained on the UCI Machine Learning Repository — SMS Spam Collection (CC BY 4.0).
+          <a href="/documentation" class="footer-link">Learn how it is made &amp; how it works →</a>
+        </p>
+      </div>
+      <div class="footer-right">
+        <span class="footer-version">SpamGuard v1.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

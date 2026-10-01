@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SpamGuard Architecture & Documentation - How it is made and how it works.">
+  <title>Documentation & Architecture — SpamGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="container header-container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">SpamGuard</span>
+          <span class="brand-subtitle">Architecture &amp; Documentation</span>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <nav class="nav-links">
+        <a href="/" class="nav-link">Classifier</a>
+        <a href="/documentation" class="nav-link active">Documentation</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Page Header -->
+      <div class="docs-hero">
+        <a href="/" class="back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Back to Classifier
+        </a>
+        <h1 class="docs-title">How SpamGuard Is Made &amp; How It Works</h1>
+        <p class="docs-subtitle">
+          A concise technical overview of the classical NLP pipeline, machine learning modeling, and real-time inference workflow.
+        </p>
+      </div>
+
+      <!-- Section 1: How It Is Made -->
+      <section class="docs-section">
+        <div class="docs-card">
+          <div class="docs-section-tag">Phase 1</div>
+          <h2 class="docs-heading">1. How It Is Made</h2>
+          <p class="docs-p">
+            SpamGuard was engineered as a pure classical Machine Learning solution without heavy neural networks or third-party cloud APIs. The system was constructed in four core stages:
+          </p>
+
+          <div class="docs-grid">
+            <div class="docs-item">
+              <h3 class="docs-item-title">A. Dataset Ingestion</h3>
+              <p class="docs-item-desc">
+                Trained on the <strong>UCI Machine Learning Repository — SMS Spam Collection</strong> (5,574 messages: 4,827 legitimate Ham and 747 unsolicited Spam). Stratified 80/20 train/test splitting was applied to maintain natural class proportions.
+              </p>
+            </div>
+
+            <div class="docs-item">
+              <h3 class="docs-item-title">B. Domain-Specific Text Preprocessing</h3>
+              <p class="docs-item-desc">
+                Raw SMS text is cleaned using a custom regex normalization pipeline in <code>src/preprocessing.py</code>:
+                lowercasing, converting URLs to <code>urladdr</code>, phone numbers to <code>numtoken</code>, currencies (<code>£</code>, <code>$</code>) to <code>currsym</code>, and stripping punctuation. Common stopwords are intentionally retained because words like <em>"free"</em>, <em>"win"</em>, and <em>"call"</em> are vital spam discriminators.
+              </p>
+            </div>
+
+            <div class="docs-item">
+              <h3 class="docs-item-title">C. TF-IDF Feature Engineering</h3>
+              <p class="docs-item-desc">
+                A <code>TfidfVectorizer</code> is fitted strictly on the training set to prevent data leakage. It extracts <strong>11,703 unigram and bigram features</strong> with sublinear term-frequency scaling (<code>sublinear_tf=True</code>), which dampens the weight of repeated words while prioritizing distinctive bigrams like <em>"cash prize"</em> and <em>"call now"</em>.
+              </p>
+            </div>
+
+            <div class="docs-item">
+              <h3 class="docs-item-title">D. Model Benchmarking &amp; Serialization</h3>
+              <p class="docs-item-desc">
+                Three classical models were trained and benchmarked under identical conditions: <strong>Multinomial Naive Bayes</strong>, <strong>Logistic Regression</strong>, and <strong>Linear SVM</strong>. <strong>Linear SVM</strong> demonstrated the highest overall Spam F1-score (<code>0.9726</code>) and recall (<code>95.30%</code>), and was persisted with <code>joblib</code> alongside the vectorizer for fast production loading.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: How It Works -->
+      <section class="docs-section">
+        <div class="docs-card">
+          <div class="docs-section-tag">Phase 2</div>
+          <h2 class="docs-heading">2. How It Works (Runtime Workflow)</h2>
+          <p class="docs-p">
+            When a user submits an SMS message, the application processes it through an end-to-end 5-step pipeline in under 2 milliseconds:
+          </p>
+
+          <div class="workflow-steps">
+            <div class="workflow-step">
+              <span class="workflow-num">01</span>
+              <div class="workflow-content">
+                <strong>Input Validation</strong>
+                <p>FastAPI validates the payload via Pydantic, enforcing non-empty input and a 1,600-character safety limit.</p>
+              </div>
+            </div>
+
+            <div class="workflow-step">
+              <span class="workflow-num">02</span>
+              <div class="workflow-content">
+                <strong>Token Normalization</strong>
+                <p>The message is normalized using <code>clean_text()</code>, turning raw links, numbers, and symbols into standardized NLP tokens.</p>
+              </div>
+            </div>
+
+            <div class="workflow-step">
+              <span class="workflow-num">03</span>
+              <div class="workflow-content">
+                <strong>Sparse Vectorization</strong>
+                <p>The saved TF-IDF vectorizer transforms the normalized text into a 11,703-dimensional sparse feature vector.</p>
+              </div>
+            </div>
+
+            <div class="workflow-step">
+              <span class="workflow-num">04</span>
+              <div class="workflow-content">
+                <strong>Decision Boundary Calculation</strong>
+                <p>The Linear SVM computes the signed distance (margin) from the separating hyperplane: positive values indicate Spam, negative values indicate legitimate Ham.</p>
+              </div>
+            </div>
+
+            <div class="workflow-step">
+              <span class="workflow-num">05</span>
+              <div class="workflow-content">
+                <strong>Dynamic JSON Response &amp; UI Render</strong>
+                <p>FastAPI returns the classification label, visual risk rating (High/Low Risk), decision margin score, and analysis explanation to the frontend without reloading the page.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Model Performance Summary -->
+      <section class="docs-section">
+        <div class="docs-card">
+          <div class="docs-section-tag">Evaluation</div>
+          <h2 class="docs-heading">3. Model Performance Summary</h2>
+          <p class="docs-p">
+            Actual test-set metrics evaluated on <strong>1,115 unseen test messages</strong> (80/20 stratified split):
+          </p>
+
+          <div class="table-responsive">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Model Architecture</th>
+                  <th>Accuracy</th>
+                  <th>Precision (Spam)</th>
+                  <th>Recall (Spam)</th>
+                  <th>F1-Score (Spam)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if metadata and metadata.all_models_comparison %}
+                  {% for m in metadata.all_models_comparison %}
+                  <tr class="{% if m.model_name == metadata.best_model_name %}active-row{% endif %}">
+                    <td>
+                      <strong>{{ m.model_name }}</strong>
+                      {% if m.model_name == metadata.best_model_name %}
+                      <span class="active-pill">Selected</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ "%.4f"|format(m.accuracy) }}</td>
+                    <td>{{ "%.4f"|format(m.precision) }}</td>
+                    <td>{{ "%.4f"|format(m.recall) }}</td>
+                    <td><strong>{{ "%.4f"|format(m.f1_score) }}</strong></td>
+                    <td>
+                      {% if m.model_name == metadata.best_model_name %}
+                      <span class="status-badge-active">In Production</span>
+                      {% else %}
+                      <span class="status-badge-evaluated">Evaluated</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr class="active-row">
+                    <td><strong>Linear SVM</strong> <span class="active-pill">Selected</span></td>
+                    <td>0.9928</td>
+                    <td>0.9930</td>
+                    <td>0.9530</td>
+                    <td>0.9726</td>
+                    <td><span class="status-badge-active">In Production</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Logistic Regression</strong></td>
+                    <td>0.9910</td>
+                    <td>1.0000</td>
+                    <td>0.9329</td>
+                    <td>0.9653</td>
+                    <td><span class="status-badge-evaluated">Evaluated</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Multinomial Naive Bayes</strong></td>
+                    <td>0.9883</td>
+                    <td>0.9928</td>
+                    <td>0.9195</td>
+                    <td>0.9547</td>
+                    <td><span class="status-badge-evaluated">Evaluated</span></td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="docs-summary-box">
+            <h4 class="summary-box-title">Why Linear SVM was selected:</h4>
+            <p class="summary-box-desc">
+              Linear SVM achieved the highest F1-score (<strong>0.9726</strong>) and caught <strong>142 out of 149</strong> spam messages (95.3% recall) while maintaining <strong>99.30% precision</strong> (yielding only 1 false positive out of 966 legitimate messages).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Return Button CTA -->
+      <div class="docs-footer-cta">
+        <a href="/" class="btn btn-primary">
+          <span>Go to Live Classifier</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <div class="footer-left">
+        <p class="footer-copy">Built with Classical NLP &amp; Machine Learning</p>
+        <p class="footer-dataset-credit">
+          Dataset: UCI Machine Learning Repository — SMS Spam Collection (Almeida &amp; Hidalgo, 2011, CC BY 4.0).
+        </p>
+      </div>
+      <div class="footer-right">
+        <span class="footer-version">SpamGuard Docs v1.1.0</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
